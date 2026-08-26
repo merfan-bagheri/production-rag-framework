@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Xilinx Hardware RAG AI Studio</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+            },
+            dark: {
+              bg: '#0f172a',
+              sidebar: '#020617',
+              card: '#1e293b',
+              border: '#334155',
+              hover: '#334155',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Marked.js for Markdown -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  
+  <!-- Highlight.js for Syntax Highlighting -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/verilog.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/vhdl.min.js"></script>
+
+  <!-- KaTeX for LaTeX Math Rendering -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="/static/styles.css">
+
+</head>
+<body class="bg-dark-bg text-slate-100 h-screen flex overflow-hidden font-sans antialiased">
+
+  <!-- Sidebar -->
+  <aside id="sidebar" class="w-64 bg-dark-sidebar border-r border-dark-border flex flex-col justify-between z-20 flex-shrink-0 overflow-hidden">
+    <div class="p-3 flex flex-col h-full overflow-hidden w-64">
+      <!-- App Header / Logo -->
+      <div class="flex items-center justify-between px-2 py-2 mb-2">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+            <i data-lucide="cpu" class="w-5 h-5 text-slate-950"></i>
+          </div>
+          <div>
+            <h1 class="text-sm font-bold tracking-tight text-white flex items-center gap-1.5">
+              Xilinx RAG AI
+              <span class="text-[10px] uppercase font-semibold px-1.5 py-0.2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded">6 Manuals</span>
+            </h1>
+            <p class="text-[11px] text-slate-400">Multi-Doc FPGA Knowledge Engine</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- New Chat Button -->
+      <button id="newChatBtn" class="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl border border-dark-border bg-slate-900/60 hover:bg-dark-hover hover:border-slate-500 text-sm font-medium transition text-slate-200 shadow-sm mb-3">
+        <i data-lucide="plus" class="w-4 h-4 text-emerald-400"></i>
+        New Conversation
+      </button>
+
+      <!-- Chat History List -->
+      <div class="flex-1 overflow-y-auto space-y-1 pr-1 custom-scrollbar" id="chatList">
+        <!-- Chats injected via JS -->
+      </div>
+
+      <!-- Sidebar Footer / System Stats -->
+      <div class="pt-3 border-t border-dark-border mt-auto space-y-2">
+        <div class="bg-slate-900/80 rounded-xl p-2.5 border border-dark-border text-xs text-slate-400 space-y-1.5">
+          <div class="flex items-center justify-between text-slate-300 font-medium">
+            <span class="flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              pgvector DB
+            </span>
+            <span id="indexedChunksBadge" class="text-emerald-400 font-mono text-[11px]">1620 chunks</span>
+          </div>
+          <p class="text-[11px] text-slate-400 truncate">Corpus: UG380, UG389, UG682, PG058, PG036, PG065</p>
+        </div>
+
+        <button id="openSettingsBtn" class="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-dark-hover text-xs font-medium text-slate-300 transition">
+          <span class="flex items-center gap-2">
+            <i data-lucide="settings" class="w-4 h-4 text-slate-400"></i>
+            Configuration Settings
+          </span>
+          <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-500"></i>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Chat Area -->
+  <main class="flex-1 flex flex-col h-full bg-dark-bg relative overflow-hidden">
+    
+    <!-- Top Navbar -->
+    <header class="h-14 border-b border-dark-border flex items-center justify-between px-4 bg-dark-bg/80 backdrop-blur-md z-10">
+      <div class="flex items-center gap-3">
+        <button id="toggleSidebarBtn" class="p-1.5 rounded-lg hover:bg-dark-hover text-slate-400 hover:text-slate-200">
+          <i data-lucide="panel-left" class="w-5 h-5"></i>
+        </button>
+        
+        <!-- Active Model Pill / Dropdown -->
+        <div class="relative">
+          <button id="modelSelectorBtn" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-dark-card border border-dark-border text-xs font-medium text-slate-200 hover:border-slate-500 transition">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span id="currentModelLabel">Gemini 3.5 Flash Lite</span>
+            <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400"></i>
+          </button>
+          
+          <!-- Dropdown Menu -->
+          <div id="modelDropdown" class="hidden absolute top-full left-0 mt-1 w-80 max-h-96 overflow-y-auto custom-scrollbar bg-dark-card border border-dark-border rounded-xl shadow-2xl p-1.5 space-y-1 z-30">
+            <!-- Google GenAI (9-Key Pool) -->
+            <div class="text-[10px] font-bold text-slate-400 px-2 py-1 uppercase tracking-wider flex items-center justify-between">
+              <span>Google AI Studio</span>
+              <span class="text-[9px] text-emerald-400 font-normal">9-Key Pool</span>
+            </div>
+            <button class="model-option w-full text-left px-2.5 py-1.5 rounded-lg text-xs hover:bg-dark-hover flex items-center justify-between" data-provider="gemini" data-model="gemini-3.5-flash-lite">
+              <span>gemini-3.5-flash-lite</span>
+              <span class="text-[10px] text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded font-mono">Recommended (Fast)</span>
+            </button>
+            <button class="model-option w-full text-left px-2.5 py-1.5 rounded-lg text-xs hover:bg-dark-hover flex items-center justify-between" data-provider="gemini" data-model="gemini-3.7-flash">
+              <span>gemini-3.7-flash</span>
+              <span class="text-[10px] text-blue-400 bg-blue-400/10 px-1.5 py-0.5 rounded font-mono">Deep Reasoning</span>
+            </button>
+
+            <!-- OpenRouter AI -->
+            <div class="text-[10px] font-bold text-slate-400 px-2 py-1 mt-2 uppercase tracking-wider flex items-center justify-between border-t border-dark-border/50 pt-1.5">
+              <span>OpenRouter AI</span>
+              <span class="text-[9px] text-amber-400 font-normal">Active Key</span>
+            </div>
+            <button class="model-option w-full text-left px-2.5 py-1.5 rounded-lg text-xs hover:bg-dark-hover flex items-center justify-between" data-provider="openrouter" data-model="meta-llama/llama-3.3-70b-instruct">
+              <span>llama-3.3-70b-instruct</span>
+              <span class="text-[10px] text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded font-mono">Llama 70B</span>
+            </button>
+            <button class="model-option w-full text-left px-2.5 py-1.5 rounded-lg text-xs hover:bg-dark-hover flex items-center justify-between" data-provider="openrouter" data-model="deepseek/deepseek-chat">
+              <span>deepseek/deepseek-chat</span>
+              <span class="text-[10px] text-indigo-400 bg-indigo-400/10 px-1.5 py-0.5 rounded font-mono">DeepSeek V3</span>
+            </button>
+            <button class="model-option w-full text-left px-2.5 py-1.5 rounded-lg text-xs hover:bg-dark-hover flex items-center justify-between" data-provider="openrouter" data-model="qwen/qwen-2.5-72b-instruct">
+              <span>qwen-2.5-72b-instruct</span>
+              <span class="text-[10px] text-orange-400 bg-orange-400/10 px-1.5 py-0.5 rounded font-mono">Qwen 72B</span>
+            </button>
+            <button class="model-option w-full text-left px-2.5 py-1.5 rounded-lg text-xs hover:bg-dark-hover flex items-center justify-between" data-provider="openrouter" data-model="meta-llama/llama-3.1-8b-instruct">
+              <span>llama-3.1-8b-instruct</span>
+              <span class="text-[10px] text-yellow-400 bg-yellow-400/10 px-1.5 py-0.5 rounded font-mono">Llama 8B</span>
+            </button>
+
+            <!-- Mistral AI -->
+            <div class="text-[10px] font-bold text-slate-400 px-2 py-1 mt-2 uppercase tracking-wider flex items-center justify-between border-t border-dark-border/50 pt-1.5">
+              <span>Mistral AI</span>
+              <span class="text-[9px] text-red-400 font-normal">Active Key</span>
+            </div>
+            <button class="model-option w-full text-left px-2.5 py-1.5 rounded-lg text-xs hover:bg-dark-hover flex items-center justify-between" data-provider="mistral" data-model="mistral-small-latest">
+              <span>mistral-small-latest</span>
+              <span class="text-[10px] text-red-400 bg-red-400/10 px-1.5 py-0.5 rounded font-mono">Fast EU</span>
+            </button>
+            <button class="model-option w-full text-left px-2.5 py-1.5 rounded-lg text-xs hover:bg-dark-hover flex items-center justify-between" data-provider="mistral" data-model="mistral-large-latest">
+              <span>mistral-large-latest</span>
+              <span class="text-[10px] text-pink-400 bg-pink-400/10 px-1.5 py-0.5 rounded font-mono">Flagship</span>
+            </button>
+            <button class="model-option w-full text-left px-2.5 py-1.5 rounded-lg text-xs hover:bg-dark-hover flex items-center justify-between" data-provider="mistral" data-model="codestral-latest">
+              <span>codestral-latest</span>
+              <span class="text-[10px] text-rose-400 bg-rose-400/10 px-1.5 py-0.5 rounded font-mono">HDL Expert</span>
+            </button>
+
+            <!-- Cohere AI -->
+            <div class="text-[10px] font-bold text-slate-400 px-2 py-1 mt-2 uppercase tracking-wider flex items-center justify-between border-t border-dark-border/50 pt-1.5">
+              <span>Cohere AI</span>
+              <span class="text-[9px] text-teal-400 font-normal">Active Key</span>
+            </div>
+            <button class="model-option w-full text-left px-2.5 py-1.5 rounded-lg text-xs hover:bg-dark-hover flex items-center justify-between" data-provider="cohere" data-model="command-r-08-2024">
+              <span>command-r-08-2024</span>
+              <span class="text-[10px] text-teal-400 bg-teal-400/10 px-1.5 py-0.5 rounded font-mono">RAG Optimized</span>
+            </button>
+            <button class="model-option w-full text-left px-2.5 py-1.5 rounded-lg text-xs hover:bg-dark-hover flex items-center justify-between" data-provider="cohere" data-model="command-r-plus-08-2024">
+              <span>command-r-plus-08-2024</span>
+              <span class="text-[10px] text-cyan-400 bg-cyan-400/10 px-1.5 py-0.5 rounded font-mono">Enterprise</span>
+            </button>
+            
+            <!-- Local Ollama (CUDA) -->
+            <div class="text-[10px] font-bold text-slate-400 px-2 py-1 mt-2 uppercase tracking-wider border-t border-dark-border/50 pt-1.5 flex items-center justify-between">
+              <span>Local Engine (Ollama)</span>
+              <span class="text-[9px] text-purple-400 font-normal">GTX 1660 Ti CUDA</span>
+            </div>
+            <button class="model-option w-full text-left px-2.5 py-1.5 rounded-lg text-xs hover:bg-dark-hover flex items-center justify-between" data-provider="ollama" data-model="gemma3:4b">
+              <span>gemma3:4b</span>
+              <span class="text-[10px] text-purple-400 bg-purple-400/10 px-1.5 py-0.5 rounded font-mono">Local 4B (VRAM)</span>
+            </button>
+            <button class="model-option w-full text-left px-2.5 py-1.5 rounded-lg text-xs hover:bg-dark-hover flex items-center justify-between" data-provider="ollama" data-model="gemma3:1b">
+              <span>gemma3:1b</span>
+              <span class="text-[10px] text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded font-mono">Local 1B (Fast)</span>
+            </button>
+          </div>
+
+        </div>
+
+
+        <!-- Quick Mode Badges -->
+        <span id="autoKBadge" class="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium flex items-center gap-1">
+          <i data-lucide="sparkles" class="w-3 h-3"></i> Auto-K (5-8 Chunks)
+        </span>
+        <span id="fastModeBadge" class="hidden text-[11px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium items-center gap-1">
+          <i data-lucide="zap" class="w-3 h-3"></i> Sub-10ms Neural Rerank
+        </span>
+        <span id="memoryBadge" class="text-[11px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 font-medium flex items-center gap-1">
+          <i data-lucide="history" class="w-3 h-3"></i> Multi-Turn Memory
+        </span>
+      </div>
+
+      <!-- Right Header Actions -->
+      <div class="flex items-center gap-2">
+        <!-- Width Selector Dropdown -->
+        <div class="relative">
+          <button id="widthSelectorBtn" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-dark-card border border-dark-border text-xs font-medium text-slate-300 hover:text-white hover:border-slate-500 transition" title="Adjust Chat Width (Standard, Medium, Wide, Full)">
+            <i data-lucide="move-horizontal" class="w-4 h-4 text-emerald-400"></i>
+            <span id="currentWidthLabel" class="hidden sm:inline font-mono text-[11px]">Wide</span>
+            <i data-lucide="chevron-down" class="w-3 h-3 text-slate-400"></i>
+          </button>
+          
+          <div id="widthDropdown" class="hidden absolute right-0 top-full mt-1 w-52 bg-dark-card border border-dark-border rounded-xl shadow-2xl p-1 space-y-1 z-30">
+            <div class="text-[10px] font-bold text-slate-400 px-2 py-1 uppercase tracking-wider">Response Layout Width</div>
+            <button class="width-option w-full text-left px-2.5 py-1.5 rounded-lg text-xs hover:bg-dark-hover flex items-center justify-between" data-width="standard">
+              <span class="flex items-center gap-2"><i data-lucide="smartphone" class="w-3.5 h-3.5 text-slate-400"></i> Standard (768px)</span>
+              <span class="check-icon text-emerald-400 hidden"><i data-lucide="check" class="w-3.5 h-3.5"></i></span>
+            </button>
+            <button class="width-option w-full text-left px-2.5 py-1.5 rounded-lg text-xs hover:bg-dark-hover flex items-center justify-between" data-width="medium">
+              <span class="flex items-center gap-2"><i data-lucide="laptop" class="w-3.5 h-3.5 text-slate-400"></i> Medium (1024px)</span>
+              <span class="check-icon text-emerald-400 hidden"><i data-lucide="check" class="w-3.5 h-3.5"></i></span>
+            </button>
+            <button class="width-option w-full text-left px-2.5 py-1.5 rounded-lg text-xs hover:bg-dark-hover flex items-center justify-between" data-width="wide">
+              <span class="flex items-center gap-2"><i data-lucide="monitor" class="w-3.5 h-3.5 text-emerald-400"></i> Wide (1280px)</span>
+              <span class="check-icon text-emerald-400 hidden"><i data-lucide="check" class="w-3.5 h-3.5"></i></span>
+            </button>
+            <button class="width-option w-full text-left px-2.5 py-1.5 rounded-lg text-xs hover:bg-dark-hover flex items-center justify-between" data-width="full">
+              <span class="flex items-center gap-2"><i data-lucide="maximize-2" class="w-3.5 h-3.5 text-slate-400"></i> Full Fluid (96%)</span>
+              <span class="check-icon text-emerald-400 hidden"><i data-lucide="check" class="w-3.5 h-3.5"></i></span>
+            </button>
+          </div>
+        </div>
+
+        <button id="exportChatBtn" class="p-1.5 rounded-lg hover:bg-dark-hover text-slate-400 hover:text-slate-200" title="Export Conversation">
+          <i data-lucide="download" class="w-4 h-4"></i>
+        </button>
+        <button id="clearChatBtn" class="p-1.5 rounded-lg hover:bg-dark-hover text-slate-400 hover:text-red-400" title="Clear Messages">
+          <i data-lucide="trash-2" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Messages Scroll Container -->
+    <div id="messagesContainer" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 custom-scrollbar">
+      
+      <!-- Welcome Hero (Shown when chat is empty) -->
+      <div id="welcomeHero" class="chat-width-transition chat-width-wide mx-auto my-auto py-12 text-center space-y-6">
+        <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-tr from-emerald-500/20 to-teal-400/20 border border-emerald-500/30 flex items-center justify-center shadow-xl shadow-emerald-500/10">
+          <i data-lucide="circuit-board" class="w-8 h-8 text-emerald-400"></i>
+        </div>
+        <div>
+          <h2 class="text-2xl font-bold text-white tracking-tight">Xilinx Multi-Document Knowledge Engine</h2>
+          <p class="text-slate-400 text-sm mt-1 max-w-xl mx-auto">
+            Dual-stage hybrid retrieval with sub-100ms neural reranking across 6 technical manuals (626 pages, 1,620 chunks).
+          </p>
+        </div>
+
+        <!-- Quick Prompt Chips -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-left pt-2">
+          <button class="prompt-chip p-3 rounded-xl bg-dark-card/60 hover:bg-dark-card border border-dark-border hover:border-emerald-500/40 transition group">
+            <div class="text-xs font-semibold text-slate-200 group-hover:text-emerald-400 flex items-center justify-between">
+              DSP48A1 35x35 Multiplier
+              <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition"></i>
+            </div>
+            <div class="text-[11px] text-slate-400 mt-1">How 4 cascaded DSP48A1 slices construct a 35x35 multiplier and wire shifts into C port.</div>
+          </button>
+
+          <button class="prompt-chip p-3 rounded-xl bg-dark-card/60 hover:bg-dark-card border border-dark-border hover:border-emerald-500/40 transition group">
+            <div class="text-xs font-semibold text-slate-200 group-hover:text-emerald-400 flex items-center justify-between">
+              BMG Hard vs Soft ECC
+              <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition"></i>
+            </div>
+            <div class="text-[11px] text-slate-400 mt-1">Differences between BuiltIn_ECC (512x64) and Soft ECC across Xilinx FPGA families.</div>
+          </button>
+
+          <button class="prompt-chip p-3 rounded-xl bg-dark-card/60 hover:bg-dark-card border border-dark-border hover:border-emerald-500/40 transition group">
+            <div class="text-xs font-semibold text-slate-200 group-hover:text-emerald-400 flex items-center justify-between">
+              Clocking Wizard Spread Spectrum
+              <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition"></i>
+            </div>
+            <div class="text-[11px] text-slate-400 mt-1">Disabled output ports, divide register repurposing, and 25-150 MHz input limits.</div>
+          </button>
+
+          <button class="prompt-chip p-3 rounded-xl bg-dark-card/60 hover:bg-dark-card border border-dark-border hover:border-emerald-500/40 transition group">
+            <div class="text-xs font-semibold text-slate-200 group-hover:text-emerald-400 flex items-center justify-between">
+              Distributed vs Block RAM
+              <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition"></i>
+            </div>
+            <div class="text-[11px] text-slate-400 mt-1">Comparative write timing, latency, and operating modes between PG036 and PG058.</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Messages Stream (Appended dynamically) -->
+      <div id="messagesList" class="chat-width-transition chat-width-wide mx-auto space-y-6"></div>
+
+    </div>
+
+    <!-- Bottom Input Container -->
+    <div class="p-4 bg-gradient-to-t from-dark-bg via-dark-bg to-transparent">
+      <div id="chatFormContainer" class="chat-width-transition chat-width-wide mx-auto">
+        <form id="chatForm" class="relative bg-dark-card rounded-2xl border border-dark-border shadow-2xl focus-within:border-emerald-500/60 transition p-2">
+
+          <textarea
+            id="queryInput"
+            rows="1"
+            placeholder="Ask anything about Xilinx IP cores & FPGAs (UG380, UG389, UG682, PG058, PG036, PG065)..."
+            class="w-full bg-transparent border-0 resize-none text-sm text-slate-100 placeholder-slate-500 focus:outline-none px-3 py-2 max-h-48 custom-scrollbar leading-relaxed"
+          ></textarea>
+          
+          <div class="flex items-center justify-between pt-2 px-2 border-t border-dark-border/40 mt-1">
+            <div class="flex items-center gap-2 text-[11px] text-slate-500">
+
+              <span class="flex items-center gap-1">
+                <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i> Zero-Hallucination
+              </span>
+              <span>•</span>
+              <span>Exact Citations [Page X]</span>
+            </div>
+
+            <button
+              type="submit"
+              id="sendBtn"
+              class="w-8 h-8 rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:opacity-40 disabled:hover:bg-emerald-500 text-slate-950 flex items-center justify-center transition shadow-md shadow-emerald-500/20"
+            >
+              <i data-lucide="arrow-up" class="w-4 h-4 stroke-[2.5]"></i>
+            </button>
+          </div>
+        </form>
+        <p class="text-center text-[11px] text-slate-500 mt-2">
+          Grounded exclusively on LogiCORE IP Distributed Memory Generator Product Guide PG036.
+        </p>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-dark-card border border-dark-border rounded-2xl max-w-md w-full shadow-2xl overflow-hidden animate-scale-up">
+      <div class="flex items-center justify-between p-4 border-b border-dark-border">
+        <h3 class="font-bold text-white flex items-center gap-2 text-sm">
+          <i data-lucide="sliders" class="w-4 h-4 text-emerald-400"></i>
+          Pipeline & Model Settings
+        </h3>
+        <button id="closeSettingsBtn" class="p-1 rounded-lg hover:bg-dark-hover text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-4 max-h-[80vh] overflow-y-auto custom-scrollbar text-xs">
+        <!-- Provider -->
+        <div class="space-y-1.5">
+          <label class="font-semibold text-slate-300">LLM Provider</label>
+          <div class="grid grid-cols-2 gap-2">
+            <label class="flex items-center gap-2 p-2 rounded-xl border border-dark-border bg-slate-900/60 cursor-pointer has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-500/10">
+              <input type="radio" name="settings_provider" value="gemini" checked class="text-emerald-500">
+              <div>
+                <div class="font-medium text-slate-200">Google GenAI</div>
+                <div class="text-[10px] text-slate-400">8-Key Pool</div>
+              </div>
+            </label>
+
+            <label class="flex items-center gap-2 p-2 rounded-xl border border-dark-border bg-slate-900/60 cursor-pointer has-[:checked]:border-amber-500 has-[:checked]:bg-amber-500/10">
+              <input type="radio" name="settings_provider" value="openrouter" class="text-amber-500">
+              <div>
+                <div class="font-medium text-slate-200">OpenRouter</div>
+                <div class="text-[10px] text-slate-400">Llama / Claude</div>
+              </div>
+            </label>
+
+            <label class="flex items-center gap-2 p-2 rounded-xl border border-dark-border bg-slate-900/60 cursor-pointer has-[:checked]:border-red-500 has-[:checked]:bg-red-500/10">
+              <input type="radio" name="settings_provider" value="mistral" class="text-red-500">
+              <div>
+                <div class="font-medium text-slate-200">Mistral AI</div>
+                <div class="text-[10px] text-slate-400">Fast EU API</div>
+              </div>
+            </label>
+
+            <label class="flex items-center gap-2 p-2 rounded-xl border border-dark-border bg-slate-900/60 cursor-pointer has-[:checked]:border-teal-500 has-[:checked]:bg-teal-500/10">
+              <input type="radio" name="settings_provider" value="cohere" class="text-teal-500">
+              <div>
+                <div class="font-medium text-slate-200">Cohere AI</div>
+                <div class="text-[10px] text-slate-400">Command R+</div>
+              </div>
+            </label>
+          </div>
+          
+          <label class="flex items-center gap-2 p-2 mt-1.5 rounded-xl border border-dark-border bg-slate-900/60 cursor-pointer has-[:checked]:border-purple-500 has-[:checked]:bg-purple-500/10">
+            <input type="radio" name="settings_provider" value="ollama" class="text-purple-500">
+            <div>
+              <div class="font-medium text-slate-200">Local Ollama</div>
+              <div class="text-[10px] text-slate-400">Localhost:11434 (Gemma 3)</div>
+            </div>
+          </label>
+        </div>
+
+        <!-- Model Name -->
+        <div class="space-y-1.5">
+          <label class="font-semibold text-slate-300">Model Name</label>
+          <input
+            type="text"
+            id="settings_model"
+            value="gemini-3.5-flash-lite"
+            class="w-full bg-slate-900 border border-dark-border rounded-xl px-3 py-2 text-slate-100 focus:outline-none focus:border-emerald-500 font-mono text-xs"
+          >
+          <p class="text-[10px] text-slate-500">Examples: gemini-3.5-flash-lite, meta-llama/llama-3.3-70b-instruct, deepseek/deepseek-chat, mistral-small-latest, command-r-08-2024</p>
+        </div>
+
+
+        <!-- Chat Layout Width -->
+        <div class="space-y-1.5 pt-2 border-t border-dark-border">
+          <label class="font-semibold text-slate-300">Default Response Width</label>
+          <div class="grid grid-cols-4 gap-1.5">
+            <label class="flex flex-col items-center justify-center p-2 rounded-xl border border-dark-border bg-slate-900/60 cursor-pointer has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-500/10 text-center">
+              <input type="radio" name="settings_chat_width" value="standard" class="hidden">
+              <span class="font-semibold text-slate-200 text-[11px]">Standard</span>
+              <span class="text-[9px] text-slate-500">768px</span>
+            </label>
+            <label class="flex flex-col items-center justify-center p-2 rounded-xl border border-dark-border bg-slate-900/60 cursor-pointer has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-500/10 text-center">
+              <input type="radio" name="settings_chat_width" value="medium" class="hidden">
+              <span class="font-semibold text-slate-200 text-[11px]">Medium</span>
+              <span class="text-[9px] text-slate-500">1024px</span>
+            </label>
+            <label class="flex flex-col items-center justify-center p-2 rounded-xl border border-dark-border bg-slate-900/60 cursor-pointer has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-500/10 text-center">
+              <input type="radio" name="settings_chat_width" value="wide" checked class="hidden">
+              <span class="font-semibold text-emerald-400 text-[11px]">Wide</span>
+              <span class="text-[9px] text-slate-500">1280px</span>
+            </label>
+            <label class="flex flex-col items-center justify-center p-2 rounded-xl border border-dark-border bg-slate-900/60 cursor-pointer has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-500/10 text-center">
+              <input type="radio" name="settings_chat_width" value="full" class="hidden">
+              <span class="font-semibold text-slate-200 text-[11px]">Full</span>
+              <span class="text-[9px] text-slate-500">96%</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Temperature -->
+        <div class="space-y-1.5">
+          <div class="flex justify-between">
+            <label class="font-semibold text-slate-300">Temperature (Hallucination Control)</label>
+
+            <span id="tempValue" class="text-emerald-400 font-mono">0.1</span>
+          </div>
+          <input
+            type="range"
+            id="settings_temperature"
+            min="0.0"
+            max="1.0"
+            step="0.05"
+            value="0.1"
+            class="w-full accent-emerald-500"
+          >
+        </div>
+
+        <!-- Adaptive Chunking / Auto-K -->
+        <div class="space-y-2 pt-2 border-t border-dark-border">
+          <label class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/60 border border-dark-border cursor-pointer">
+            <div>
+              <div class="font-medium text-emerald-400 flex items-center gap-1.5">
+                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                Automatic Adaptive Chunking (Auto-K)
+              </div>
+              <div class="text-[10px] text-slate-400 mt-0.5 leading-relaxed">
+                Automatically tunes chunk count (5 to 8-10) for Verilog/VHDL code, pinouts, and step-by-step procedures with Port Description priority weighting.
+              </div>
+            </div>
+            <input type="checkbox" id="settings_auto_k" checked class="w-4 h-4 accent-emerald-500 rounded">
+          </label>
+        </div>
+
+        <!-- Top-K Rerank Chunks (Manual override) -->
+        <div id="manualTopKSection" class="space-y-1.5 opacity-60">
+          <div class="flex justify-between">
+            <label class="font-semibold text-slate-300">Context Chunks (Top-K)</label>
+            <span id="topKValue" class="text-emerald-400 font-mono">20</span>
+          </div>
+          <input
+            type="range"
+            id="settings_top_k"
+            min="1"
+            max="40"
+            step="1"
+            value="20"
+            class="w-full accent-emerald-500"
+          >
+        </div>
+
+        <!-- Toggles -->
+        <div class="space-y-2 pt-2 border-t border-dark-border">
+          <label class="flex items-center justify-between p-2 rounded-xl bg-slate-900/60 border border-dark-border cursor-pointer">
+            <div>
+              <div class="font-medium text-slate-200">Multi-Turn Conversational Memory</div>
+              <div class="text-[10px] text-slate-400">History-aware query reformulation across conversational turns</div>
+            </div>
+            <input type="checkbox" id="settings_history" checked class="w-4 h-4 accent-emerald-500 rounded">
+          </label>
+
+          <label class="flex items-center justify-between p-2 rounded-xl bg-slate-900/60 border border-dark-border cursor-pointer">
+            <div>
+              <div class="font-medium text-slate-200">Ultra-Fast Reranking Mode</div>
+              <div class="text-[10px] text-slate-400">Use 5ms TinyBERT neural ranker instead of 12-layer MiniLM</div>
+            </div>
+            <input type="checkbox" id="settings_fast" class="w-4 h-4 accent-emerald-500 rounded">
+          </label>
+        </div>
+      </div>
+
+      <div class="p-4 border-t border-dark-border bg-slate-900/40 flex justify-end gap-2">
+        <button id="saveSettingsBtn" class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 font-semibold text-slate-950 text-xs transition">
+          Apply Settings
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- App JavaScript Logic -->
+  <script src="/static/app.js"></script>
+</body>
+</html>

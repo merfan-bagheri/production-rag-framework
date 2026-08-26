@@ -1,0 +1,343 @@
+{
+  "_comment": "Unified Master Configuration for Production Hardware RAG Framework. Modify parameters here to customize the framework for any domain.",
+
+  "app": {
+    "_comment": "Application metadata and Web Studio presentation settings",
+    "title": "Xilinx LogiCORE IP RAG Expert",
+    "version": "2.5.0",
+    "description": "High-Precision Production RAG for Xilinx FPGA & LogiCORE IP Documentation",
+    "default_port": 8000,
+    "sample_prompts": [
+      "What is the difference between RAMB16BWER and RAMB8BWER in Spartan-6?",
+      "Compare Distributed RAM (PG036) vs Block RAM (PG058) in terms of read latency and primitive implementations.",
+      "Explain the DSP48A1 pre-adder functionality, OPMODE control, and binary opcode mappings in UG389.",
+      "What are the Clocking Wizard jitter filter modes, output limits, and Spread Spectrum pin assignments in PG065?",
+      "Explain Spartan-6 configuration fallback watchdog timer (CWDT) and MultiBoot operation in UG380.",
+      "In ISim (UG682), explain the standalone command line flow using vhpcomp, vlogcomp, and fuse."
+    ]
+  },
+
+  "system_prompt": {
+    "_comment": "System persona, operational reasoning protocol, and citation rules for the LLM",
+    "file_path": "system_prompt.txt",
+    "example_file_path": "system_prompt.example.txt",
+    "load_from_file": true
+  },
+
+  "database": {
+    "_comment": "PostgreSQL + pgvector connection parameters and Docker container specifications",
+    "host": "localhost",
+    "port": 15432,
+    "fallback_port": 5432,
+    "name": "rag_db",
+    "user": "postgres",
+    "password": "postgres",
+    "container_name": "rag_postgres",
+    "docker_image": "pgvector/pgvector:pg16",
+    "docker_volume": "rag_pgvector_data"
+  },
+
+  "embedding_and_reranking": {
+    "_comment": "Dense embeddings, Cross-Encoder models, and RRF retrieval parameters",
+    "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+    "embedding_dim": 384,
+    "reranker_model": "ms-marco-TinyBERT-L-2-v2",
+    "reranker_fast_model": "ms-marco-TinyBERT-L-2-v2",
+    "candidate_pool_size": 60,
+    "top_k_dense": 60,
+    "top_k_sparse": 60,
+    "rrf_k": 60,
+    "final_top_k": 25,
+    "min_chunk_token_threshold": 75,
+    "mmr_similarity_threshold": 0.85,
+    "neighbor_expansion_enabled": true,
+    "neighbor_expansion_min_score": 0.05,
+    "neighbor_expansion_max_chunks": 12
+  },
+
+  "llm_providers": {
+    "_comment": "Multi-provider LLM fleet, rate limiting, token limits, and model definitions",
+    "default_provider": "gemini",
+    "max_output_tokens": 16384,
+    "timeout_seconds": 90,
+    "apis_file": "APIs.txt",
+    "apis_example_file": "APIs.example.txt",
+    "google_key_file": "google-api-key.txt",
+    "providers": {
+      "google": {
+        "_comment": "Google GenAI API (Gemini models with rotational key pooling)",
+        "models": ["gemini-3.5-flash-lite", "gemini-3.7-flash", "gemini-2.5-flash"],
+        "default_model": "gemini-3.5-flash-lite",
+        "fallback_model": "gemini-3.5-flash-lite",
+        "min_delay_seconds": 0.2
+      },
+      "mistral": {
+        "_comment": "Mistral AI API (Mistral Small / Codestral)",
+        "base_url": "https://api.mistral.ai/v1/chat/completions",
+        "models": ["mistral-small-latest", "codestral-latest"],
+        "default_model": "mistral-small-latest",
+        "min_delay_seconds": 1.0
+      },
+      "cohere": {
+        "_comment": "Cohere API (Command R)",
+        "base_url": "https://api.cohere.com/v2/chat",
+        "models": ["command-r-08-2024"],
+        "default_model": "command-r-08-2024",
+        "min_delay_seconds": 1.5
+      },
+      "openrouter": {
+        "_comment": "OpenRouter API (Llama 3.3, Qwen 2.5, DeepSeek)",
+        "base_url": "https://openrouter.ai/api/v1/chat/completions",
+        "models": [
+          "meta-llama/llama-3.3-70b-instruct",
+          "meta-llama/llama-3.1-8b-instruct",
+          "deepseek/deepseek-chat",
+          "qwen/qwen-2.5-72b-instruct"
+        ],
+        "default_model": "meta-llama/llama-3.3-70b-instruct",
+        "min_delay_seconds": 1.0
+      },
+      "ollama": {
+        "_comment": "Local Ollama server (Air-gapped CUDA execution)",
+        "base_url": "http://localhost:11434",
+        "models": ["gemma3:4b", "gemma3:1b"],
+        "default_model": "gemma3:4b",
+        "fallback_model": "gemma3:1b"
+      }
+    }
+  },
+
+  "retrieval_and_routing": {
+    "_comment": "Domain-specific acronyms, document routing registry, and query intent classifiers",
+
+    "domain_keywords": [
+      "mif", "coe", "qspo", "qdpo", "spo", "dpo", "dpra", "spra",
+      "write_first", "read_first", "no_change", "true dual port",
+      "ce_overrides_sync_controls", "sync_controls_overrides_ce",
+      "failure: test completed successfully", "testbench", "simulation directory",
+      "memory_initialization_radix", "memory_initialization_vector",
+      "mux array", "resource utilization", "slice registers", "dsp48a1", "clocking wizard",
+      "spread spectrum", "multiboot", "strike count", "mode pins", "readback crc",
+      "35x35", "35 x 35", "complex multiplier", "macc", "ramb16bwer", "ramb8bwer",
+      "ram32x1s", "ram64x1s", "ram128x1d", "srl16e", "vccaux", "vcco_2", "vccint",
+      "csi_b", "rdwr_b", "cso_b", "t_as", "t_ah", "din", "dout", "icap_spartan6",
+      "startup_spartan6", "fuse", "vhpcomp", "vlogcomp", "isim", "wdb", "tclbatch",
+      "clkinstopped", "clkfbstopped", "clk_out1", "clk_out2", "clk_out3", "clk_out4",
+      "stat gwe", "ghigh_b", "gts_cfg_b", "dec_error", "usrcklo", "userclk",
+      "cor1", "ssclksrc", "dbiterr", "sbiterr", "w_rem", "tspread", "opmode5",
+      "cyi", "cyo", "cwdt", "d:a:b", "fuse_key", "stat[15]", "down_high", "down_low",
+      "center_high", "center_low", "fixed primitive", "low power algorithm"
+    ],
+
+    "comparison_patterns": [
+      "\\bcompare\\b", "\\bcomparison\\b", "\\bvs\\b", "\\bversus\\b",
+      "\\bdifference\\b", "\\bdifferences\\b", "\\bbetween\\b", "\\bacross\\b",
+      "\\bمقایسه\\b", "\\bتفاوت\\b", "\\bفرق\\b"
+    ],
+
+    "document_registry": {
+      "PG058": {
+        "title": "LogiCORE IP Block Memory Generator v7.3 (PG058)",
+        "category": "FPGA_IP_GUIDE",
+        "patterns": [
+          "\\bpg058\\b", "\\bblock\\s+memory\\b", "\\bblock\\s+ram\\b", "\\bbram\\b", "\\bblk_mem_gen\\b", "\\bbmg\\b",
+          "\\bramb16bwer\\b", "\\bramb8bwer\\b", "\\btrue\\s+dual\\s+port\\b", "\\bwrite_first\\b", "\\bread_first\\b", "\\bno_change\\b",
+          "\\bprimitive\\s+selection\\b", "\\bbyte\\s+write\\s+enable\\b", "\\bbuiltin_ecc\\b",
+          "\\bsoft\\s+ecc\\b", "\\bhard\\s+ecc\\b", "\\bmemory\\s+slave\\b", "\\bperipheral\\s+slave\\b",
+          "\\baxi4\\s+block\\s+memory\\b", "\\baxi4\\s+bmg\\b", "\\bdoutb\\b", "\\bwrite-read\\s+collision\\b"
+        ]
+      },
+      "PG036": {
+        "title": "LogiCORE IP Distributed Memory Generator v7.2 (PG036)",
+        "category": "FPGA_IP_GUIDE",
+        "patterns": [
+          "\\bpg036\\b", "\\bpg063\\b", "\\bdistributed\\s+memory\\b", "\\bdistributed\\s+ram\\b",
+          "\\blut\\s+ram\\b", "\\bsrl16\\b", "\\bspra\\b", "\\bqspo\\b", "\\bqdpo\\b",
+          "\\bdist_mem_gen\\b", "\\bsingle[ -]port\\s+distributed\\b", "\\ba\\[n:3\\]\\b", "\\bspra\\[n:0\\]\\b"
+        ]
+      },
+      "PG065": {
+        "title": "LogiCORE IP Clocking Wizard (PG065)",
+        "category": "FPGA_IP_GUIDE",
+        "patterns": [
+          "\\bpg065\\b", "\\bclocking\\s+wizard\\b", "\\bclk_wiz\\b", "\\bpll\\b",
+          "\\bmmcm\\b", "\\bmmcme2\\b", "\\bjitter\\b", "\\bphase\\s+shift\\b",
+          "\\bspread\\s+spectrum\\b", "\\bclk_out3\\b", "\\bclk_out4\\b",
+          "\\bclkinstopped\\b", "\\bclkfbstopped\\b", "\\bclock\\s+switchover\\b"
+        ]
+      },
+      "UG380": {
+        "title": "Spartan-6 FPGA Configuration User Guide (UG380)",
+        "category": "FPGA_USER_GUIDE",
+        "patterns": [
+          "\\bug380\\b", "\\bspartan-6\\s+configuration\\b", "\\bspartan-6\\s+fpgas\\b", "\\bselectmap\\b",
+          "\\bmaster\\s+bpi\\b", "\\bicap_spartan6\\b", "\\bbitstream\\s+generation\\b",
+          "\\bmultiboot\\b", "\\bstrike\\s+count\\b", "\\bmode\\s+pins\\b", "\\bm\\[1:0\\]\\b",
+          "\\breadback\\s+crc\\b", "\\bmasking\\s+granularity\\b"
+        ]
+      },
+      "UG389": {
+        "title": "Spartan-6 FPGA DSP48A1 Slice User Guide (UG389)",
+        "category": "FPGA_USER_GUIDE",
+        "patterns": [
+          "\\bug389\\b", "\\bdsp48a1\\b", "\\bdsp\\s+slice\\b", "\\b18x18\\s+multiplier\\b",
+          "\\bpre-adder\\b", "\\bpcin\\b", "\\bpcout\\b", "\\bsymmetric\\s+fir\\b",
+          "\\bopmode\\b", "\\b35x35\\b", "\\b4-multiplier\\b", "\\b3-multiplier\\b",
+          "\\bcomplex\\s+multiplication\\b", "\\bmultiplier\\s+use\\s+model\\b"
+        ]
+      },
+      "UG682": {
+        "title": "ISim In-Depth Tutorial (UG682)",
+        "category": "FPGA_TUTORIAL",
+        "patterns": [
+          "\\bug682\\b", "\\bisim\\b", "\\bisim\\s+tutorial\\b", "\\bwaveform\\s+viewer\\b",
+          "\\bvcd\\s+dump\\b", "\\bdrp_demo\\b", "\\bdi_in\\b", "\\bfuse\\b", "\\bvhpcomp\\b",
+          "\\bvlogcomp\\b", "\\bstandalone\\s+mode\\b", "\\bsimulate_isim\\b"
+        ]
+      }
+    },
+
+    "adaptive_intent_strategies": {
+      "broad_primitive_guide": {
+        "_comment": "Triggered when query asks how to use an IP primitive or architecture guide",
+        "signals": [
+          "how to using", "how to use", "using dsp", "dsp48a1", "primitive guide",
+          "overview", "architecture", "complete guide", "functional operation",
+          "how to configure", "how to instantiate"
+        ],
+        "recommended_k": 35,
+        "port_boost": 0.25,
+        "rationale": "Broad hardware primitive / IP usage and architectural guide detected. Expanded k to 35 with port and OPMODE weighting."
+      },
+      "hardware_comprehensive": {
+        "_comment": "Triggered when query requests complete code implementation, pinouts, or tables",
+        "signals": [
+          "verilog", "vhdl", "instantiat", "wrapper", "module", "example",
+          "pinout", "all ports", "all signals", "table", "port list",
+          "step by step", "how to implement", "implementation", "coe file",
+          "memory initialization", "complete list", "summary table", "primitive",
+          "opmode", "multiplexer", "use model"
+        ],
+        "recommended_k": 30,
+        "port_boost": 0.22,
+        "rationale": "Hardware code / full pinout / step-by-step implementation detected. Expanded k to 30 with Port Description weighting."
+      },
+      "timing_registers": {
+        "_comment": "Triggered when query asks about clock cycles, waveforms, or timing latencies",
+        "signals": [
+          "timing", "latency", "cycles", "clock", "clk", "waveform",
+          "pipeline", "register", "qspo", "qdpo", "spo", "dpo", "stages",
+          "synchronous", "asynchronous", "reset priority", "collision", "write_first"
+        ],
+        "recommended_k": 20,
+        "port_boost": 0.12,
+        "rationale": "Timing, latency, and register configurations detected. Set k to 20 with timing diagram priority."
+      },
+      "architecture_constraints": {
+        "_comment": "Triggered when query asks about specific FPGA architecture or silicon family constraints",
+        "signals": [
+          "device family", "zynq", "virtex", "spartan", "kintex", "artix",
+          "srl16", "distributed ram", "dual-port", "simple dual-port", "primitives", "bram"
+        ],
+        "recommended_k": 18,
+        "port_boost": 0.08,
+        "rationale": "Architectural family constraints detected. Set k to 18."
+      },
+      "focused_lookup": {
+        "_comment": "Default fallback mode for focused, concise single-topic lookups",
+        "signals": [],
+        "recommended_k": 14,
+        "port_boost": 0.0,
+        "rationale": "Standard focused query. Standard k=14."
+      }
+    },
+
+    "query_reformulation": {
+      "_comment": "Multi-turn history condensation prompt and anaphoric reference triggers",
+      "system_prompt": "You are a High-Precision Query Condensation Engine for a Multi-Document Technical Knowledge Base.\n\nYOUR TASK:\nGiven the Multi-Turn Conversation History and the latest Follow-up User Query:\n1. Resolve all anaphoric references, pronouns (it, its, this, that, they, these), and ordinal references (step 2, option 4, table 3, the second one).\n2. Retain the specific document, system, or component context discussed in previous turns if the user asks a follow-up about that topic.\n3. Formulate a single, self-contained, unambiguous standalone search query optimized for dense vector and lexical BM25 retrieval.\n4. DO NOT answer the question. Output ONLY the condensed standalone query string and nothing else.",
+      "anaphoric_patterns": [
+        "\\b(it|its|they|them|their|this|that|these|those)\\b",
+        "\\b(what about|how about|tell me more|explain more)\\b",
+        "\\b(step|option|item|table|figure|section|part)\\s+\\d+\\b",
+        "\\b(the\\s+(?:first|second|third|fourth|fifth|last|previous|former|latter))\\b",
+        "\\b(where\\s+must\\s+(?:that|the)\\s+file\\s+reside)\\b",
+        "\\b(and\\s+(?:what|how|why|where))\\b",
+        "^(why|how|what|where)\\s+(?:is|are|do|does|did|was|were)\\s+(?:it|that|this)\\b"
+      ]
+    }
+  },
+
+  "ingestion_and_chunking": {
+    "_comment": "Document parsing, boundary rules, header/footer cleaning, and metadata mapping",
+    "docs_dir": "docs",
+    "default_pdf_file": "doc.pdf",
+    "min_chunk_tokens": 75,
+    "chunk_target_tokens": 400,
+    "chunk_overlap_tokens": 80,
+    "max_chunk_chars": 1800,
+    "overlap_chars": 200,
+    "header_footer_strip_patterns": [
+      "^PG\\d+\\s+[A-Za-z]+\\s+\\d+,\\s+\\d+",
+      "^UG\\d+\\s+\\(v[\\d\\.]+\\)\\s+[A-Za-z]+\\s+\\d+,\\s+\\d+",
+      "^\\*{0,2}Spartan-6 FPGA [A-Za-z0-9\\s]+ User Guide.*",
+      "^\\*{0,2}LogiCORE IP [A-Za-z0-9\\s]+ Product Guide.*",
+      "^\\*{0,2}ISim In-Depth Tutorial.*",
+      "^\\*{0,2}(?:UG|PG)\\d+\\s*\\(v[\\d\\.]+\\).*",
+      "^Chapter\\s+\\d+:\\s+.*",
+      "^_?~~.*~~_?",
+      "www\\.xilinx\\.com",
+      "send feedback",
+      "^X-Ref Target - Figure.*",
+      "^UG\\d+_c\\d+_\\d+_\\d+.*",
+      "^PG\\d+_c\\d+_\\d+_\\d+.*",
+      "^Table\\s+\\d+-\\d+:\\s*$"
+    ],
+    "ignore_sections": [
+      "Revision History",
+      "Notice of Disclaimer",
+      "Table of Contents",
+      "Conventions",
+      "Additional Resources",
+      "References",
+      "Documentation Conventions",
+      "Standard Conventions"
+    ],
+    "document_metadata_map": {
+      "pg058-blk-mem-gen.pdf": {
+        "doc_id": "PG058",
+        "doc_title": "LogiCORE IP Block Memory Generator v7.3 (PG058)",
+        "doc_category": "FPGA_IP_GUIDE"
+      },
+      "pg063-dist-mem-gen.pdf": {
+        "doc_id": "PG036",
+        "doc_title": "LogiCORE IP Distributed Memory Generator v7.2 (PG036)",
+        "doc_category": "FPGA_IP_GUIDE"
+      },
+      "doc.pdf": {
+        "doc_id": "PG036",
+        "doc_title": "LogiCORE IP Distributed Memory Generator v7.2 (PG036)",
+        "doc_category": "FPGA_IP_GUIDE"
+      },
+      "pg065-clk-wiz.pdf": {
+        "doc_id": "PG065",
+        "doc_title": "LogiCORE IP Clocking Wizard (PG065)",
+        "doc_category": "FPGA_IP_GUIDE"
+      },
+      "ug380.pdf": {
+        "doc_id": "UG380",
+        "doc_title": "Spartan-6 FPGA Configuration User Guide (UG380)",
+        "doc_category": "FPGA_USER_GUIDE"
+      },
+      "ug389.pdf": {
+        "doc_id": "UG389",
+        "doc_title": "Spartan-6 FPGA DSP48A1 Slice User Guide (UG389)",
+        "doc_category": "FPGA_USER_GUIDE"
+      },
+      "ug682.pdf": {
+        "doc_id": "UG682",
+        "doc_title": "ISim In-Depth Tutorial (UG682)",
+        "doc_category": "FPGA_TUTORIAL"
+      }
+    }
+  }
+}

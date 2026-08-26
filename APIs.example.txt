@@ -1,0 +1,34 @@
+# ==============================================================================
+# XILINX FPGA HARDWARE RAG AI - MULTI-PROVIDER API KEYS CONFIGURATION TEMPLATE
+# ==============================================================================
+# Instructions:
+# 1. Copy this file and rename it to 'APIs.txt' in the project root:
+#    cp APIs.example.txt APIs.txt
+# 2. Paste your active API keys under each respective provider section.
+# 3. DO NOT commit your 'APIs.txt' with real secrets to GitHub or version control.
+#
+# Supported Providers & Production Models:
+# - Google GenAI: gemini-3.5-flash-lite, gemini-3.7-flash, gemini-2.5-flash
+#   (You can paste multiple Google keys, one per line, for round-robin pooling)
+# - Mistral AI: mistral-small-latest, codestral-latest
+# - Cohere: command-r-08-2024
+# - OpenRouter: meta-llama/llama-3.1-8b-instruct, meta-llama/llama-3.3-70b-instruct, deepseek/deepseek-chat, qwen/qwen-2.5-72b-instruct
+# - Local Ollama (CUDA): gemma3:4b, gemma3:1b (No API key needed, run ollama serve)
+# ==============================================================================
+
+google:
+# Paste your Google AI Studio Gemini API keys below (one per line for key pooling):
+# AIzaSy_EXAMPLE_KEY_1
+# AIzaSy_EXAMPLE_KEY_2
+
+mistral:
+# Paste your Mistral AI API key below:
+# YOUR_MISTRAL_API_KEY
+
+cohere:
+# Paste your Cohere API key below:
+# YOUR_COHERE_API_KEY
+
+openrouter:
+# Paste your OpenRouter API key below:
+# sk-or-v1-YOUR_OPENROUTER_API_KEY

@@ -1,0 +1,153 @@
+{
+  "_comment": "Example Master Configuration Template for Production RAG Framework. Copy to rag_config.json and adjust for your domain.",
+
+  "app": {
+    "_comment": "Application metadata and Web Studio presentation settings",
+    "title": "Autonomous Technical RAG Studio",
+    "version": "2.5.0",
+    "description": "Production-Grade High-Precision RAG Knowledge Engine",
+    "default_port": 8000,
+    "sample_prompts": [
+      "Explain the primary architecture and functional specifications of System A.",
+      "Compare Component X vs Component Y in terms of operational parameters and constraints.",
+      "What are the configuration registers and setup requirements documented in Chapter 3?"
+    ]
+  },
+
+  "system_prompt": {
+    "_comment": "System persona, operational reasoning protocol, and citation rules for the LLM",
+    "file_path": "system_prompt.txt",
+    "example_file_path": "system_prompt.example.txt",
+    "load_from_file": true
+  },
+
+  "database": {
+    "_comment": "PostgreSQL + pgvector connection parameters and Docker container specifications",
+    "host": "localhost",
+    "port": 15432,
+    "fallback_port": 5432,
+    "name": "rag_db",
+    "user": "postgres",
+    "password": "postgres",
+    "container_name": "rag_postgres",
+    "docker_image": "pgvector/pgvector:pg16",
+    "docker_volume": "rag_pgvector_data"
+  },
+
+  "embedding_and_reranking": {
+    "_comment": "Dense embeddings, Cross-Encoder models, and RRF retrieval parameters",
+    "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+    "embedding_dim": 384,
+    "reranker_model": "ms-marco-TinyBERT-L-2-v2",
+    "reranker_fast_model": "ms-marco-TinyBERT-L-2-v2",
+    "candidate_pool_size": 25,
+    "top_k_dense": 35,
+    "top_k_sparse": 35,
+    "rrf_k": 60,
+    "final_top_k": 11,
+    "neighbor_expansion_enabled": true,
+    "neighbor_expansion_min_score": 0.08,
+    "neighbor_expansion_max_chunks": 4
+  },
+
+  "llm_providers": {
+    "_comment": "Multi-provider LLM fleet, rate limiting, token limits, and model definitions",
+    "default_provider": "gemini",
+    "max_output_tokens": 16384,
+    "timeout_seconds": 90,
+    "apis_file": "APIs.txt",
+    "apis_example_file": "APIs.example.txt",
+    "google_key_file": "google-api-key.txt",
+    "providers": {
+      "google": {
+        "_comment": "Google GenAI API (Gemini models with rotational key pooling)",
+        "models": ["gemini-3.5-flash-lite", "gemini-3.7-flash", "gemini-2.5-flash"],
+        "default_model": "gemini-3.5-flash-lite",
+        "fallback_model": "gemini-3.5-flash-lite",
+        "min_delay_seconds": 0.2
+      },
+      "mistral": {
+        "_comment": "Mistral AI API",
+        "base_url": "https://api.mistral.ai/v1/chat/completions",
+        "models": ["mistral-small-latest", "codestral-latest"],
+        "default_model": "mistral-small-latest",
+        "min_delay_seconds": 1.0
+      },
+      "cohere": {
+        "_comment": "Cohere API",
+        "base_url": "https://api.cohere.com/v2/chat",
+        "models": ["command-r-08-2024"],
+        "default_model": "command-r-08-2024",
+        "min_delay_seconds": 1.5
+      },
+      "openrouter": {
+        "_comment": "OpenRouter API",
+        "base_url": "https://openrouter.ai/api/v1/chat/completions",
+        "models": [
+          "meta-llama/llama-3.3-70b-instruct",
+          "meta-llama/llama-3.1-8b-instruct",
+          "deepseek/deepseek-chat",
+          "qwen/qwen-2.5-72b-instruct"
+        ],
+        "default_model": "meta-llama/llama-3.3-70b-instruct",
+        "min_delay_seconds": 1.0
+      },
+      "ollama": {
+        "_comment": "Local Ollama server",
+        "base_url": "http://localhost:11434",
+        "models": ["gemma3:4b", "gemma3:1b"],
+        "default_model": "gemma3:4b",
+        "fallback_model": "gemma3:1b"
+      }
+    }
+  },
+
+  "retrieval_and_routing": {
+    "_comment": "Domain-specific acronyms, document routing registry, and query intent classifiers",
+    "domain_keywords": [],
+    "comparison_patterns": [
+      "\\bcompare\\b", "\\bcomparison\\b", "\\bvs\\b", "\\bversus\\b",
+      "\\bdifference\\b", "\\bdifferences\\b", "\\bbetween\\b", "\\bacross\\b"
+    ],
+    "document_registry": {},
+    "adaptive_intent_strategies": {
+      "detailed_implementation": {
+        "_comment": "Triggered when query requests complete implementation or step-by-step guidance",
+        "signals": ["implementation", "step by step", "how to", "example", "table", "complete list"],
+        "recommended_k": 8,
+        "port_boost": 0.15,
+        "rationale": "Detailed implementation query detected. Expanded k to 8."
+      },
+      "focused_lookup": {
+        "_comment": "Default fallback mode for focused single-topic lookups",
+        "signals": [],
+        "recommended_k": 6,
+        "port_boost": 0.0,
+        "rationale": "Standard focused query. Standard k=6."
+      }
+    },
+    "query_reformulation": {
+      "_comment": "Multi-turn history condensation prompt and anaphoric reference triggers",
+      "system_prompt": "You are a High-Precision Query Condensation Engine for a Multi-Document Technical Knowledge Base.\n\nYOUR TASK:\nGiven the Multi-Turn Conversation History and the latest Follow-up User Query:\n1. Resolve all anaphoric references, pronouns (it, its, this, that, they, these), and ordinal references (step 2, option 4, table 3, the second one).\n2. Retain the specific document, system, or component context discussed in previous turns if the user asks a follow-up about that topic.\n3. Formulate a single, self-contained, unambiguous standalone search query optimized for dense vector and lexical BM25 retrieval.\n4. DO NOT answer the question. Output ONLY the condensed standalone query string and nothing else.",
+      "anaphoric_patterns": [
+        "\\b(it|its|they|them|their|this|that|these|those)\\b",
+        "\\b(what about|how about|tell me more|explain more)\\b",
+        "\\b(step|option|item|table|figure|section|part)\\s+\\d+\\b",
+        "\\b(the\\s+(?:first|second|third|fourth|fifth|last|previous|former|latter))\\b",
+        "\\b(and\\s+(?:what|how|why|where))\\b",
+        "^(why|how|what|where)\\s+(?:is|are|do|does|did|was|were)\\s+(?:it|that|this)\\b"
+      ]
+    }
+  },
+
+  "ingestion_and_chunking": {
+    "_comment": "Document parsing, boundary rules, header/footer cleaning, and metadata mapping",
+    "docs_dir": "docs",
+    "chunk_target_tokens": 400,
+    "chunk_overlap_tokens": 80,
+    "max_chunk_chars": 1800,
+    "overlap_chars": 200,
+    "header_footer_strip_patterns": [],
+    "document_metadata_map": {}
+  }
+}

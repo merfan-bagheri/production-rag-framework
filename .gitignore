@@ -1,0 +1,44 @@
+# Python & Virtual Environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+rag_venv/
+venv/
+ENV/
+env/
+.pytest_cache/
+.coverage
+
+# Sensitive API Keys & Credentials
+APIs.txt
+google-api-key.txt
+*.env
+*.env.*
+.env
+.env.local
+
+# Temporary Task Logs & Diagnostics
+task-*.log
+*.log
+scratch/
+.system_generated/
+
+# Docker Local Volume Data
+rag_pgvector_data/
+docker_volumes/
+
+# Monorepo Migration Temp Folders
+ai-applied-system/
+applied-ai-systems/
+
+# OS & Editor Artifacts
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Local Only Reports & Raw Archives
+Just for local/
+
